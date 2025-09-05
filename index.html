@@ -524,7 +524,8 @@
                         if (e.touches.length === 2) {
                             e.preventDefault();
                             const currentDistance = getDistance(e.touches[0], e.touches[1]);
-                            const zoomRatio = currentDistance / initialDistance;
+                            const sensitivity = 0.5; // Thử với 0.3, 0.5, 1.0 để tìm mức phù hợp
+                            const zoomRatio = 1 + ((currentDistance - initialDistance) / initialDistance) * sensitivity;
 
                             // Tính scale mới nhưng chỉ áp dụng cho pdfCanvas
                             cssScale = initialScale * zoomRatio;
