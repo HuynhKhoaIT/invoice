@@ -529,7 +529,7 @@
                             // Tính scale mới nhưng chỉ áp dụng cho pdfCanvas
                             cssScale = initialScale * zoomRatio;
                             cssScale = Math.min(Math.max(cssScale, 0.2), 3.0); // Giới hạn min/max
-                            updateCanvasTransform();
+                            // updateCanvasTransform();
 
                             // Debounce để tránh render liên tục
                             clearTimeout(zoomTimeout);
@@ -561,11 +561,11 @@
                         if (e.ctrlKey) {
                             e.preventDefault();
 
-                            const delta = e.deltaY > 0 ? -0.005 : 0.005;
+                            const delta = e.deltaY > 0 ? -0.01 : 0.01;
                             cssScale += delta;
                             cssScale = Math.min(Math.max(cssScale, 0.2), 3.0);
 
-                            updateCanvasTransform();
+                            // updateCanvasTransform();
 
                             clearTimeout(zoomTimeout);
                             scale = cssScale;
