@@ -2,7 +2,7 @@
 <html lang="de">
     <head>
         <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Validate Invoice</title>
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -36,92 +36,27 @@
                 align-items: center;
                 justify-content: center;
             }
+
             .container {
                 width: 100%;
                 height: calc(100% - 50px);
                 display: flex;
                 flex-direction: column;
             }
-            .toolbar {
-                background-color: var(--toolbar-bg);
-                padding: 5px;
-                border-bottom: 1px solid #ddd;
-                display: flex;
-                gap: 5px;
-                align-items: center;
-                justify-content: space-between;
-            }
-
-            .toolbar button {
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 5px 10px;
-                font-size: 1rem;
-                transition: opacity 0.3s;
-                color: var(--text-color);
-            }
-
-            .toolbar button:hover {
-                opacity: 0.9;
-            }
-
-            .toolbar .left-tools {
-                display: flex;
-                align-items: center;
-                gap: 5px;
-            }
-
-            .toolbar .right-tools {
-                display: flex;
-                gap: 5px;
-            }
-
-            .main-content {
-                display: flex;
-                flex: 1;
-                overflow: hidden;
-                text-align: center;
-            }
-
-            .sidebar {
-                width: 200px;
-                background-color: #fff;
-                border-right: 1px solid #ddd;
-                overflow-y: auto;
-                display: none; /* Toggleable */
-            }
-
-            .sidebar ul {
-                list-style: none;
-            }
-
-            .sidebar ul li {
-                padding: 10px;
-                cursor: pointer;
-                border-bottom: 1px solid #ddd;
-            }
-
-            .sidebar ul li:hover {
-                background-color: #f5f5f5;
-            }
-
-            .sidebar ul li canvas {
-                max-width: 100%;
-                height: auto;
-            }
 
             .viewer {
                 flex: 1;
                 overflow: auto;
                 background-color: #d4d4d6;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
 
-            .pageCanvas {
-                user-select: none;
-                -webkit-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
+            #pdfViewerFrame {
+                width: 100%;
+                height: 100%;
+                border: none;
             }
 
             .logo-container {
@@ -233,6 +168,7 @@
                 background-color: var(--primary-green);
                 color: white;
             }
+
             .preview,
             .download {
                 background-color: var(--primary-green);
@@ -247,6 +183,7 @@
                 opacity: 0.6;
                 pointer-events: none;
             }
+
             .submit.active {
                 background-color: #4caf50;
                 opacity: 1;
@@ -274,9 +211,11 @@
             .hidden {
                 display: none;
             }
+
             input.error {
                 border: 1px solid red;
             }
+
             .spinner {
                 border: 8px solid rgba(0, 0, 0, 0.1);
                 border-top: 8px solid #323131;
@@ -286,6 +225,7 @@
                 animation: spin 1s linear infinite;
                 display: none;
             }
+
             @keyframes spin {
                 0% {
                     transform: rotate(0deg);
@@ -337,21 +277,26 @@
             input:focus {
                 outline: none;
             }
+
             #sendEmailInput:disabled {
                 background-color: #e0e0e0 !important;
-                color: #777; 
+                color: #777;
                 cursor: not-allowed;
             }
 
             #sendEmailForm button:disabled {
-                background-color: #bdbdbd !important; 
-                color: #fff; 
+                background-color: #bdbdbd !important;
+                color: #fff;
                 cursor: not-allowed !important;
-                opacity: 1; 
+                opacity: 1;
             }
-            @media (max-width: 480px) {
+
+            @media (max-width: 768px) {
                 .form-container {
                     padding: 15px;
+                }
+                #pdfViewerFrame {
+                    min-width: 100%;
                 }
             }
         </style>
@@ -365,10 +310,8 @@
         <div class="success-container" style="width: 100%; max-width: 1300px; height: 100%; border-radius: 0; padding: 8px;">
             <div class="container">
                 <div class="main-content">
-                    <div class="sidebar" id="sidebar"  >
-                        <ul id="thumbnailList"  style="display: none;"></ul>
-                    </div>
                     <div class="viewer">
+                        <iframe id="pdfViewerFrame" src=""></iframe>
                     </div>
                 </div>
             </div>
@@ -390,11 +333,9 @@
                 <div class="form-group">
                     <input type="text" id="firstName" placeholder="Vorname" required />
                 </div>
-
                 <div class="form-group">
                     <input type="text" id="lastName" placeholder="Nachname" required />
                 </div>
-
                 <div class="form-group">
                     <input type="text" id="address" placeholder="Straße und Hausnummer" required />
                 </div>
@@ -411,7 +352,6 @@
                         <span style="margin-left: 8px;">Keine Angaben machen, überspringen</span>
                     </label>
                 </div>
-
                 <div class="button-container">
                     <button type="submit" class="submit">Fortfahren</button>
                 </div>
@@ -425,15 +365,10 @@
                         <pattern id="pattern0" patternContentUnits="objectBoundingBox" width="1" height="1">
                             <use xlink:href="#image0_2273_8" transform="scale(0.00195312)" />
                         </pattern>
-                        <image
-                            id="image0_2273_8"
-                            width="512"
-                            height="512"
-                        />
+                        <image id="image0_2273_8" width="512" height="512" />
                     </defs>
                 </svg>
             </div>
-
             <h1 class="title-success">Dieser Inhalt ist nicht mehr verfügbar!</h1>
         </div>
         <!-- Toast notification -->
@@ -452,249 +387,6 @@
             let fileBlob = null;
             let fileName = "hoa_don.pdf";
             let emailParam = "";
-            let pdfDoc = null;
-            let currentScale = 1.0;
-            let currentTx = 0;
-            let currentTy = 0;
-            let pdfContainer = null;
-            let pageContainer = null;
-            let isPinching = false;
-            let isPanning = false;
-            let isDragging = false;
-            let initialDist = 0;
-            let initialScale = 1;
-            let initialTx = 0;
-            let initialTy = 0;
-            let initialRelX = 0;
-            let initialRelY = 0;
-            let startX = 0;
-            let startY = 0;
-            let startMouseX = 0;
-            let startMouseY = 0;
-
-            function getDistance(touch1, touch2) {
-                const dx = touch2.clientX - touch1.clientX;
-                const dy = touch2.clientY - touch1.clientY;
-                return Math.sqrt(dx * dx + dy * dy);
-            }
-
-            async function renderAllPages() {
-                const viewer = document.querySelector('.viewer');
-                viewer.innerHTML = '';
-                pdfContainer = document.createElement('div');
-                pdfContainer.id = 'pdfContainer';
-                pdfContainer.style.position = 'relative';
-                pdfContainer.style.width = '100%';
-                pdfContainer.style.height = 'auto';
-                viewer.appendChild(pdfContainer);
-
-                pageContainer = document.createElement('div');
-                pageContainer.id = 'pageContainer';
-                pageContainer.style.position = 'relative';
-                pageContainer.style.top = '0';
-                pageContainer.style.left = '0';
-                pageContainer.style.transformOrigin = '0 0';
-                pdfContainer.appendChild(pageContainer);
-
-                const renderScale = 1.5;
-                const renderPromises = [];
-                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                    const pageDiv = document.createElement('div');
-                    pageDiv.style.display = 'block';
-                    pageDiv.style.margin = '10px auto';
-                    pageDiv.style.textAlign = 'center';
-                    const canvas = document.createElement('canvas');
-                    canvas.id = `pageCanvas_${pageNum}`;
-                    canvas.className = 'pageCanvas';
-                    pageDiv.appendChild(canvas);
-                    pageContainer.appendChild(pageDiv);
-
-                    const renderPromise = pdfDoc.getPage(pageNum).then((page) => {
-                        const viewport = page.getViewport({ scale: renderScale });
-                        canvas.width = viewport.width;
-                        canvas.height = viewport.height;
-                        const ctx = canvas.getContext('2d');
-                        return page.render({ canvasContext: ctx, viewport }).promise;
-                    });
-                    renderPromises.push(renderPromise);
-                }
-
-                await Promise.all(renderPromises);
-
-                pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
-            }
-
-            function generateThumbnails() {
-                const sidebar = document.getElementById('sidebar');
-                const ul = document.getElementById('thumbnailList');
-                ul.innerHTML = '';
-                // sidebar.style.display = 'block';
-
-                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                    const li = document.createElement('li');
-                    const thumbCanvas = document.createElement('canvas');
-                    li.appendChild(thumbCanvas);
-                    li.style.cursor = 'pointer';
-                    li.onclick = () => {
-                        const targetCanvas = document.getElementById(`pageCanvas_${pageNum}`);
-                        if (targetCanvas) {
-                            targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    };
-                    ul.appendChild(li);
-
-                    pdfDoc.getPage(pageNum).then((page) => {
-                        const unscaledViewport = page.getViewport({ scale: 1 });
-                        const thumbScale = 150 / unscaledViewport.width;
-                        const thumbViewport = page.getViewport({ scale: thumbScale });
-                        thumbCanvas.width = thumbViewport.width;
-                        thumbCanvas.height = thumbViewport.height;
-                        const ctx = thumbCanvas.getContext('2d');
-                        page.render({ canvasContext: ctx, viewport: thumbViewport });
-                    });
-                }
-            }
-
-            document.addEventListener("DOMContentLoaded", async function () {
-                const urlParams = new URLSearchParams(window.location.search);
-                qrcode = urlParams.get("qrcode");
-                emailParam = urlParams.get("email") || "";
-
-                if (qrcode) {
-                    qrcode = qrcode.replace(/ /g, "+");
-                }
-
-                if (qrcode) {
-                    try {
-                        const response = await api.post("/invoice/scan-qrcode", { qrcode });
-                        if (response.data && response.data.data.state) {
-                            switch (response.data.data.state) {
-                                case 2:
-                                case 3:
-                                    await checkStatus();
-                                    break;
-                                default:
-                                    showForm();
-                            }
-                        } else {
-                            showForm();
-                        }
-                    } catch (error) {
-                        showError();
-                    }
-                } else {
-                    showError();
-                }
-
-                // Touch and mouse events for pan and zoom
-                document.addEventListener('touchstart', (e) => {
-                    if (e.touches.length === 1 && pdfContainer) {
-                        isPanning = true;
-                        const touch = e.touches[0];
-                        startX = touch.clientX - currentTx;
-                        startY = touch.clientY - currentTy;
-                    } else if (e.touches.length === 2 && pdfDoc && pdfContainer) {
-                        isPinching = true;
-                        const t0 = e.touches[0];
-                        const t1 = e.touches[1];
-                        initialDist = getDistance(t0, t1);
-                        initialScale = currentScale;
-                        initialTx = currentTx;
-                        initialTy = currentTy;
-                        const centerX = (t0.clientX + t1.clientX) / 2;
-                        const centerY = (t0.clientY + t1.clientY) / 2;
-                        const rect = pdfContainer.getBoundingClientRect();
-                        initialRelX = centerX - rect.left;
-                        initialRelY = centerY - rect.top;
-                    }
-                }, { passive: false });
-
-                document.addEventListener('touchmove', (e) => {
-                    if (isPanning && e.touches.length === 1 && pageContainer) {
-                        e.preventDefault();
-                        const touch = e.touches[0];
-                        currentTx = touch.clientX - startX;
-                        currentTy = touch.clientY - startY;
-                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
-                    } else if (isPinching && e.touches.length === 2 && pageContainer) {
-                        e.preventDefault();
-                        const t0 = e.touches[0];
-                        const t1 = e.touches[1];
-                        const currentDist = getDistance(t0, t1);
-                        if (initialDist === 0) return;
-                        const deltaScale = currentDist / initialDist;
-                        let targetScale = initialScale * deltaScale;
-                        targetScale = Math.max(0.5, Math.min(3.0, targetScale));
-                        const centerX = (t0.clientX + t1.clientX) / 2;
-                        const centerY = (t0.clientY + t1.clientY) / 2;
-                        const rect = pdfContainer.getBoundingClientRect();
-                        const currentRelX = centerX - rect.left;
-                        const currentRelY = centerY - rect.top;
-                        const dScale = targetScale / initialScale;
-                        let zoomTx = initialRelX * (1 - dScale) + initialTx * dScale;
-                        let zoomTy = initialRelY * (1 - dScale) + initialTy * dScale;
-                        const deltaPanX = currentRelX - initialRelX;
-                        const deltaPanY = currentRelY - initialRelY;
-                        currentTx = zoomTx + deltaPanX;
-                        currentTy = zoomTy + deltaPanY;
-                        currentScale = targetScale;
-                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
-                    }
-                }, { passive: false });
-
-                document.addEventListener('touchend', (e) => {
-                    if (e.touches.length < 2) {
-                        isPinching = false;
-                        initialDist = 0;
-                    }
-                    if (e.touches.length === 0) {
-                        isPanning = false;
-                    }
-                }, { passive: false });
-
-                // Mouse pan
-                document.addEventListener('mousedown', (e) => {
-                    if (e.button === 0 && pdfContainer) {
-                        isDragging = true;
-                        startMouseX = e.clientX - currentTx;
-                        startMouseY = e.clientY - currentTy;
-                        e.preventDefault();
-                    }
-                });
-
-                document.addEventListener('mousemove', (e) => {
-                    if (isDragging && pageContainer) {
-                        currentTx = e.clientX - startMouseX;
-                        currentTy = e.clientY - startMouseY;
-                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
-                        e.preventDefault();
-                    }
-                });
-
-                document.addEventListener('mouseup', () => {
-                    isDragging = false;
-                });
-
-                // Wheel zoom at mouse position
-                document.addEventListener('wheel', (e) => {
-                    if (e.ctrlKey && pdfContainer && pageContainer) {
-                        e.preventDefault();
-                        const rect = pdfContainer.getBoundingClientRect();
-                        const relX = e.clientX - rect.left;
-                        const relY = e.clientY - rect.top;
-                        const factor = e.deltaY * -0.001;
-                        let targetScale = currentScale * (1 + factor);
-                        targetScale = Math.max(0.5, Math.min(3.0, targetScale));
-                        const dScale = targetScale / currentScale;
-                        let newTx = relX * (1 - dScale) + currentTx * dScale;
-                        let newTy = relY * (1 - dScale) + currentTy * dScale;
-                        currentTx = newTx;
-                        currentTy = newTy;
-                        currentScale = targetScale;
-                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
-                    }
-                }, { passive: false });
-            });
 
             function showForm() {
                 document.querySelector(".form-container").style.display = "block";
@@ -755,7 +447,7 @@
                     if (!input.checkValidity()) {
                         input.classList.add("error");
                         if (isValid) {
-                            input.focus(); // focus vào field đầu tiên lỗi
+                            input.focus();
                         }
                         isValid = false;
                     } else {
@@ -788,7 +480,6 @@
                         submitButton.classList.remove("active");
                         await checkStatus();
 
-                        // Cập nhật URL với email param
                         if (formData.email && !termsCheckbox.checked) {
                             const newUrl = new URL(window.location.href);
                             newUrl.searchParams.set("email", formData.email);
@@ -829,7 +520,6 @@
                     const sendEmailInput = document.getElementById("sendEmailInput");
 
                     if (emailParam) {
-                        // Đã có email trong URL => disable form
                         sendEmailInput.value = emailParam;
                         sendEmailInput.disabled = true;
                         sendEmailForm.querySelector("button[type=submit]").disabled = true;
@@ -839,7 +529,6 @@
                     return;
                 }
 
-                // Polling
                 const intervalId = setInterval(async () => {
                     try {
                         const response = await api.post("/invoice/check-status", { qrcode });
@@ -850,7 +539,7 @@
                             return;
                         }
 
-                        if (response.data && response.data.data) {
+                        if (response.data && firstCheck.data.data) {
                             clearInterval(intervalId);
                             await fetchFileBlob(response.data.data);
                             document.querySelector(".loading-container").style.display = "none";
@@ -859,7 +548,6 @@
                             const sendEmailInput = document.getElementById("sendEmailInput");
 
                             if (emailParam) {
-                                // Đã có email trong URL => disable form
                                 sendEmailInput.value = emailParam;
                                 sendEmailInput.disabled = true;
                                 sendEmailForm.querySelector("button[type=submit]").disabled = true;
@@ -880,22 +568,11 @@
                     });
                     fileBlob = new Blob([response.data], { type: "application/pdf" });
 
-                    const pdfData = await fileBlob.arrayBuffer();
-                    pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
-
-                    const isMobile = window.innerWidth <= 768;
-                    const firstPagePromise = pdfDoc.getPage(1);
-                    const firstPage = await firstPagePromise;
-                    const unscaledViewport = firstPage.getViewport({ scale: 1 });
-                    const viewerWidth = document.querySelector('.viewer').clientWidth;
-                    let logicalScale = isMobile ? (viewerWidth / unscaledViewport.width) * 0.95 : 1.0;
-                    const renderScale = 1.5;
-                    currentScale = logicalScale / renderScale;
-                    currentTx = 0;
-                    currentTy = 0;
-
-                    await renderAllPages();
-                    generateThumbnails();
+                    const pdfUrl = window.URL.createObjectURL(fileBlob);
+                    console.log("fileBlob",pdfUrl);
+                    const viewerFrame = document.getElementById("pdfViewerFrame");
+                    // Sử dụng viewer.html từ PDF.js
+                    viewerFrame.src = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
 
                     const contentDisposition = response.headers["content-disposition"];
                     if (contentDisposition) {
@@ -921,7 +598,6 @@
                 }
             });
 
-            // Gửi email
             document.getElementById("sendEmailForm")?.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const sendEmailForm = document.getElementById("sendEmailForm");
@@ -933,7 +609,7 @@
                     if (!input.checkValidity()) {
                         input.classList.add("error");
                         if (isValid) {
-                            input.focus(); // focus vào field đầu tiên lỗi
+                            input.focus();
                         }
                         isValid = false;
                     } else {
@@ -949,8 +625,6 @@
                     const response = await api.post("/invoice/send-to-email", { qrcode, email });
                     if (response.status === 200 || response.status === 201) {
                         showToast("Gửi email thành công!", "success");
-
-                        // Gắn email vào URL để disable form
                         const newUrl = new URL(window.location.href);
                         newUrl.searchParams.set("email", email);
                         window.history.replaceState({}, "", newUrl);
@@ -966,6 +640,38 @@
                 } catch (err) {
                     console.error("Send email error:", err);
                     showToast("Có lỗi khi gửi email.", "error");
+                }
+            });
+
+            document.addEventListener("DOMContentLoaded", async function () {
+                const urlParams = new URLSearchParams(window.location.search);
+                qrcode = urlParams.get("qrcode");
+                emailParam = urlParams.get("email") || "";
+
+                if (qrcode) {
+                    qrcode = qrcode.replace(/ /g, "+");
+                }
+
+                if (qrcode) {
+                    try {
+                        const response = await api.post("/invoice/scan-qrcode", { qrcode });
+                        if (response.data && response.data.data.state) {
+                            switch (response.data.data.state) {
+                                case 2:
+                                case 3:
+                                    await checkStatus();
+                                    break;
+                                default:
+                                    showForm();
+                            }
+                        } else {
+                            showForm();
+                        }
+                    } catch (error) {
+                        showError();
+                    }
+                } else {
+                    showError();
                 }
             });
         </script>
