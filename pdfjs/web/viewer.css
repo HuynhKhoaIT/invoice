@@ -5892,6 +5892,7 @@ body.wait::before{
 
 #viewerContainer{
   overflow:auto;
+  position:absolute;
   inset:var(--toolbar-height) 0 0;
   outline:none;
   z-index:0;
