@@ -23,7 +23,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 <html dir="ltr" mozdisallowselectionprint>
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <meta name="google" content="notranslate">
     <title>PDF.js viewer</title>
 
@@ -784,21 +784,5 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
-  
-    <script>
-window.addEventListener("message", (event) => {
-
-  if (event.data.type === "LOAD_PDF" && event.data.pdfData) {
-    PDFViewerApplication.open({ data: event.data.pdfData })
-      .then(() => {
-        console.log("✅ PDF đã load thành công!");
-      })
-      .catch((err) => {
-        console.error("❌ Lỗi khi load PDF:", err);
-      });
-  }
-});
-
-</script>
   </body>
 </html>
