@@ -310,7 +310,7 @@
             <div class="container">
                 <div class="main-content" style="flex:1" >
                     <div class="viewer">
-                        <iframe id="pdfViewerFrame" src=""></iframe>
+                        <iframe id="pdfViewerFrame" src="/pdfjs/web/viewer.html"></iframe>
                     </div>
                 </div>
             </div>
@@ -559,28 +559,70 @@
                 }, 5000);
             }
 
-            async function fetchFileBlob(data) {
-                try {
-                    const response = await api.get(`/file/download/${data}`, {
-                        responseType: "blob",
-                    });
-                    fileBlob = new Blob([response.data], { type: "application/pdf" });
+            // async function fetchFileBlob(data) {
+            //     try {
+            //         const response = await api.get(`/file/download/${data}`, {
+            //             responseType: "blob",
+            //         });
+            //         fileBlob = new Blob([response.data], { type: "application/pdf" });
 
-                    const pdfUrl = window.URL.createObjectURL(fileBlob);
-                    const viewerFrame = document.getElementById("pdfViewerFrame");
-                    // Sử dụng viewer.html từ PDF.js
-                    viewerFrame.src = `/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
-                    const contentDisposition = response.headers["content-disposition"];
-                    if (contentDisposition) {
-                        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                        if (fileNameMatch && fileNameMatch[1]) {
-                            fileName = fileNameMatch[1];
-                        }
-                    }
-                } catch (error) {
-                    console.error("Fetch blob error:", error);
-                }
-            }
+            //         const pdfUrl = window.URL.createObjectURL(fileBlob);
+            //         const viewerFrame = document.getElementById("pdfViewerFrame");
+            //         // Sử dụng viewer.html từ PDF.js
+            //         viewerFrame.src = `/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
+            //         const contentDisposition = response.headers["content-disposition"];
+            //         if (contentDisposition) {
+            //             const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+            //             if (fileNameMatch && fileNameMatch[1]) {
+            //                 fileName = fileNameMatch[1];
+            //             }
+            //         }
+            //     } catch (error) {
+            //         console.error("Fetch blob error:", error);
+            //     }
+            // }
+async function fetchFileBlob(data) {
+  try {
+    const response = await api.get(`/file/download/${data}`, {
+      responseType: "blob",
+    });
+
+    const fileBlob = new Blob([response.data], { type: "application/pdf" });
+    const arrayBuffer = await fileBlob.arrayBuffer();
+
+    const viewerFrame = document.getElementById("pdfViewerFrame");
+
+    // Hàm gửi message
+    const sendMessage = () => {
+      console.log("📤 Gửi PDF sang viewer.html");
+
+viewerFrame.contentWindow.postMessage(
+  { type: "LOAD_PDF", pdfData: arrayBuffer },
+  "*",
+  [arrayBuffer] // 👈 thêm cái này
+);
+    };
+
+    // Nếu iframe đã sẵn sàng thì gửi luôn
+    if (viewerFrame.contentWindow) {
+      sendMessage();
+    } else {
+      // Nếu chưa, đợi onload
+      viewerFrame.onload = () => sendMessage();
+    }
+
+    // Nếu muốn lấy tên file từ header
+    const contentDisposition = response.headers["content-disposition"];
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+      if (fileNameMatch && fileNameMatch[1]) {
+        console.log("📂 File name:", fileNameMatch[1]);
+      }
+    }
+  } catch (error) {
+    console.error("❌ Fetch blob error:", error);
+  }
+}
 
             document.getElementById("downloadSuccessBtn").addEventListener("click", () => {
                 if (fileBlob) {

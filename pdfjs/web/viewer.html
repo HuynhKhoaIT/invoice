@@ -34,6 +34,7 @@ See https://github.com/adobe-type-tools/cmap-resources
     <link rel="stylesheet" href="viewer.css">
 
   <script src="viewer.mjs" type="module"></script>
+  
   </head>
 
   <body tabindex="0">
@@ -783,5 +784,22 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
+  
+    <script>
+window.addEventListener("message", (event) => {
+  console.log("📥 viewer.html nhận message:", event.data);
+
+  if (event.data.type === "LOAD_PDF" && event.data.pdfData) {
+    PDFViewerApplication.open({ data: event.data.pdfData })
+      .then(() => {
+        console.log("✅ PDF đã load thành công!");
+      })
+      .catch((err) => {
+        console.error("❌ Lỗi khi load PDF:", err);
+      });
+  }
+});
+
+</script>
   </body>
 </html>
