@@ -5879,6 +5879,8 @@ body.wait::before{
   margin:0;
   display:flex;
   flex-direction:column;
+  top: -42px;
+
 }
 
 #sidebarContent{
