@@ -106,14 +106,22 @@
                 background-color: #f5f5f5;
             }
 
+            .sidebar ul li canvas {
+                max-width: 100%;
+                height: auto;
+            }
+
             .viewer {
                 flex: 1;
-                overflow-y: auto;
+                overflow: auto;
                 background-color: #d4d4d6;
             }
 
-            #pdfCanvas {
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            .pageCanvas {
+                user-select: none;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
             }
 
             .logo-container {
@@ -357,11 +365,10 @@
         <div class="success-container" style="width: 100%; max-width: 1300px; height: 100%; border-radius: 0; padding: 8px;">
             <div class="container">
                 <div class="main-content">
-                    <div class="sidebar" id="sidebar">
-                        <ul id="thumbnailList"></ul>
+                    <div class="sidebar" id="sidebar"  >
+                        <ul id="thumbnailList"  style="display: none;"></ul>
                     </div>
                     <div class="viewer">
-                        <canvas id="pdfCanvas"></canvas>
                     </div>
                 </div>
             </div>
@@ -446,10 +453,107 @@
             let fileName = "hoa_don.pdf";
             let emailParam = "";
             let pdfDoc = null;
-            let currentPage = 1;
-            let scale = 1.0;
-            let cssScale = 1.0; // Biến để lưu tỷ lệ scale CSS tạm thời
-            let isRendering = false; // Trạng thái render để tránh render trùng lặp
+            let currentScale = 1.0;
+            let currentTx = 0;
+            let currentTy = 0;
+            let pdfContainer = null;
+            let pageContainer = null;
+            let isPinching = false;
+            let isPanning = false;
+            let isDragging = false;
+            let initialDist = 0;
+            let initialScale = 1;
+            let initialTx = 0;
+            let initialTy = 0;
+            let initialRelX = 0;
+            let initialRelY = 0;
+            let startX = 0;
+            let startY = 0;
+            let startMouseX = 0;
+            let startMouseY = 0;
+
+            function getDistance(touch1, touch2) {
+                const dx = touch2.clientX - touch1.clientX;
+                const dy = touch2.clientY - touch1.clientY;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+
+            async function renderAllPages() {
+                const viewer = document.querySelector('.viewer');
+                viewer.innerHTML = '';
+                pdfContainer = document.createElement('div');
+                pdfContainer.id = 'pdfContainer';
+                pdfContainer.style.position = 'relative';
+                pdfContainer.style.width = '100%';
+                pdfContainer.style.height = 'auto';
+                viewer.appendChild(pdfContainer);
+
+                pageContainer = document.createElement('div');
+                pageContainer.id = 'pageContainer';
+                pageContainer.style.position = 'relative';
+                pageContainer.style.top = '0';
+                pageContainer.style.left = '0';
+                pageContainer.style.transformOrigin = '0 0';
+                pdfContainer.appendChild(pageContainer);
+
+                const renderScale = 1.5;
+                const renderPromises = [];
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.style.display = 'block';
+                    pageDiv.style.margin = '10px auto';
+                    pageDiv.style.textAlign = 'center';
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `pageCanvas_${pageNum}`;
+                    canvas.className = 'pageCanvas';
+                    pageDiv.appendChild(canvas);
+                    pageContainer.appendChild(pageDiv);
+
+                    const renderPromise = pdfDoc.getPage(pageNum).then((page) => {
+                        const viewport = page.getViewport({ scale: renderScale });
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+                        const ctx = canvas.getContext('2d');
+                        return page.render({ canvasContext: ctx, viewport }).promise;
+                    });
+                    renderPromises.push(renderPromise);
+                }
+
+                await Promise.all(renderPromises);
+
+                pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
+            }
+
+            function generateThumbnails() {
+                const sidebar = document.getElementById('sidebar');
+                const ul = document.getElementById('thumbnailList');
+                ul.innerHTML = '';
+                // sidebar.style.display = 'block';
+
+                for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                    const li = document.createElement('li');
+                    const thumbCanvas = document.createElement('canvas');
+                    li.appendChild(thumbCanvas);
+                    li.style.cursor = 'pointer';
+                    li.onclick = () => {
+                        const targetCanvas = document.getElementById(`pageCanvas_${pageNum}`);
+                        if (targetCanvas) {
+                            targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    };
+                    ul.appendChild(li);
+
+                    pdfDoc.getPage(pageNum).then((page) => {
+                        const unscaledViewport = page.getViewport({ scale: 1 });
+                        const thumbScale = 150 / unscaledViewport.width;
+                        const thumbViewport = page.getViewport({ scale: thumbScale });
+                        thumbCanvas.width = thumbViewport.width;
+                        thumbCanvas.height = thumbViewport.height;
+                        const ctx = thumbCanvas.getContext('2d');
+                        page.render({ canvasContext: ctx, viewport: thumbViewport });
+                    });
+                }
+            }
 
             document.addEventListener("DOMContentLoaded", async function () {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -482,91 +586,114 @@
                     showError();
                 }
 
-              
-                let initialDistance = 0;
-                let initialScale = scale;
-                let cssScale = scale;
-                let zoomTimeout;
-                let offsetX = 0, offsetY = 0;
-               
-function getDistance(t1, t2) {
-  const dx = t2.clientX - t1.clientX;
-  const dy = t2.clientY - t1.clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-}
+                // Touch and mouse events for pan and zoom
+                document.addEventListener('touchstart', (e) => {
+                    if (e.touches.length === 1 && pdfContainer) {
+                        isPanning = true;
+                        const touch = e.touches[0];
+                        startX = touch.clientX - currentTx;
+                        startY = touch.clientY - currentTy;
+                    } else if (e.touches.length === 2 && pdfDoc && pdfContainer) {
+                        isPinching = true;
+                        const t0 = e.touches[0];
+                        const t1 = e.touches[1];
+                        initialDist = getDistance(t0, t1);
+                        initialScale = currentScale;
+                        initialTx = currentTx;
+                        initialTy = currentTy;
+                        const centerX = (t0.clientX + t1.clientX) / 2;
+                        const centerY = (t0.clientY + t1.clientY) / 2;
+                        const rect = pdfContainer.getBoundingClientRect();
+                        initialRelX = centerX - rect.left;
+                        initialRelY = centerY - rect.top;
+                    }
+                }, { passive: false });
 
-function getMidpoint(t1, t2) {
-  return {
-    x: (t1.clientX + t2.clientX) / 2,
-    y: (t1.clientY + t2.clientY) / 2,
-  };
-}
+                document.addEventListener('touchmove', (e) => {
+                    if (isPanning && e.touches.length === 1 && pageContainer) {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        currentTx = touch.clientX - startX;
+                        currentTy = touch.clientY - startY;
+                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
+                    } else if (isPinching && e.touches.length === 2 && pageContainer) {
+                        e.preventDefault();
+                        const t0 = e.touches[0];
+                        const t1 = e.touches[1];
+                        const currentDist = getDistance(t0, t1);
+                        if (initialDist === 0) return;
+                        const deltaScale = currentDist / initialDist;
+                        let targetScale = initialScale * deltaScale;
+                        targetScale = Math.max(0.5, Math.min(3.0, targetScale));
+                        const centerX = (t0.clientX + t1.clientX) / 2;
+                        const centerY = (t0.clientY + t1.clientY) / 2;
+                        const rect = pdfContainer.getBoundingClientRect();
+                        const currentRelX = centerX - rect.left;
+                        const currentRelY = centerY - rect.top;
+                        const dScale = targetScale / initialScale;
+                        let zoomTx = initialRelX * (1 - dScale) + initialTx * dScale;
+                        let zoomTy = initialRelY * (1 - dScale) + initialTy * dScale;
+                        const deltaPanX = currentRelX - initialRelX;
+                        const deltaPanY = currentRelY - initialRelY;
+                        currentTx = zoomTx + deltaPanX;
+                        currentTy = zoomTy + deltaPanY;
+                        currentScale = targetScale;
+                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
+                    }
+                }, { passive: false });
 
-function updateCanvasTransform(midpoint) {
-  const canvas = document.getElementById("pdfCanvas");
-  if (canvas) {
-    canvas.style.transformOrigin = `${midpoint.x}px ${midpoint.y}px`;
-    canvas.style.transform = `scale(${cssScale}) translate(${offsetX}px, ${offsetY}px)`;
-  }
-}
+                document.addEventListener('touchend', (e) => {
+                    if (e.touches.length < 2) {
+                        isPinching = false;
+                        initialDist = 0;
+                    }
+                    if (e.touches.length === 0) {
+                        isPanning = false;
+                    }
+                }, { passive: false });
 
-document.addEventListener("touchstart", (e) => {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    initialDistance = getDistance(e.touches[0], e.touches[1]);
-    initialCssScale = cssScale;
-  }
-}, { passive: false });
+                // Mouse pan
+                document.addEventListener('mousedown', (e) => {
+                    if (e.button === 0 && pdfContainer) {
+                        isDragging = true;
+                        startMouseX = e.clientX - currentTx;
+                        startMouseY = e.clientY - currentTy;
+                        e.preventDefault();
+                    }
+                });
 
-document.addEventListener("touchmove", (e) => {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const currentDistance = getDistance(e.touches[0], e.touches[1]);
-    const midpoint = getMidpoint(e.touches[0], e.touches[1]);
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging && pageContainer) {
+                        currentTx = e.clientX - startMouseX;
+                        currentTy = e.clientY - startMouseY;
+                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
+                        e.preventDefault();
+                    }
+                });
 
-    const zoomRatio = currentDistance / initialDistance;
-    cssScale = Math.min(Math.max(initialCssScale * zoomRatio, 0.5), 3);
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
 
-    updateCanvasTransform(midpoint);
-
-    clearTimeout(zoomTimeout);
-    zoomTimeout = setTimeout(() => {
-      scale = cssScale;
-      renderPage();
-    }, 200);
-  }
-}, { passive: false });
-
-document.addEventListener("touchend", (e) => {
-  if (e.touches.length < 2) {
-    initialDistance = 0;
-    scale = cssScale;
-    renderPage();
-  }
-}, { passive: false });
-
-                // ==================
-                // 2. Pinch-to-zoom trên touchpad (wheel + ctrl)
-                // ==================
-                document.addEventListener(
-                    "wheel",
-                    (e) => {
-                        if (e.ctrlKey) {
-                            e.preventDefault();
-
-                            const delta = e.deltaY > 0 ? -0.01 : 0.01;
-                            cssScale += delta;
-                            cssScale = Math.min(Math.max(cssScale, 0.2), 3.0);
-
-                            // updateCanvasTransform();
-
-                            clearTimeout(zoomTimeout);
-                            scale = cssScale;
-                                renderPage();
-                        }
-                    },
-                    { passive: false }
-                );
+                // Wheel zoom at mouse position
+                document.addEventListener('wheel', (e) => {
+                    if (e.ctrlKey && pdfContainer && pageContainer) {
+                        e.preventDefault();
+                        const rect = pdfContainer.getBoundingClientRect();
+                        const relX = e.clientX - rect.left;
+                        const relY = e.clientY - rect.top;
+                        const factor = e.deltaY * -0.001;
+                        let targetScale = currentScale * (1 + factor);
+                        targetScale = Math.max(0.5, Math.min(3.0, targetScale));
+                        const dScale = targetScale / currentScale;
+                        let newTx = relX * (1 - dScale) + currentTx * dScale;
+                        let newTy = relY * (1 - dScale) + currentTy * dScale;
+                        currentTx = newTx;
+                        currentTy = newTy;
+                        currentScale = targetScale;
+                        pageContainer.style.transform = `translate(${currentTx}px, ${currentTy}px) scale(${currentScale})`;
+                    }
+                }, { passive: false });
             });
 
             function showForm() {
@@ -755,8 +882,21 @@ document.addEventListener("touchend", (e) => {
 
                     const pdfData = await fileBlob.arrayBuffer();
                     pdfDoc = await pdfjsLib.getDocument({ data: pdfData }).promise;
-                    currentPage = 1;
-                    renderPage();
+
+                    const isMobile = window.innerWidth <= 768;
+                    const firstPagePromise = pdfDoc.getPage(1);
+                    const firstPage = await firstPagePromise;
+                    const unscaledViewport = firstPage.getViewport({ scale: 1 });
+                    const viewerWidth = document.querySelector('.viewer').clientWidth;
+                    let logicalScale = isMobile ? (viewerWidth / unscaledViewport.width) * 0.95 : 1.0;
+                    const renderScale = 1.5;
+                    currentScale = logicalScale / renderScale;
+                    currentTx = 0;
+                    currentTy = 0;
+
+                    await renderAllPages();
+                    generateThumbnails();
+
                     const contentDisposition = response.headers["content-disposition"];
                     if (contentDisposition) {
                         const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
@@ -767,72 +907,6 @@ document.addEventListener("touchend", (e) => {
                 } catch (error) {
                     console.error("Fetch blob error:", error);
                 }
-            }
-            function renderPage() {
-                if (!pdfDoc || isRendering) return;
-                isRendering = true;
-
-                pdfDoc.getPage(currentPage).then((page) => {
-                    const canvas = document.getElementById("pdfCanvas");
-                    const context = canvas.getContext("2d");
-
-                    const isMobile = window.innerWidth <= 768; // Check mobile
-                    const originalViewport = page.getViewport({ scale: 1 });
-
-                    let finalViewport;
-
-                    if (isMobile) {
-                        // === MOBILE: Fit PDF vào màn hình ===
-                        const containerWidth = window.innerWidth;
-                        const containerHeight = window.innerHeight;
-
-                        // Tính tỷ lệ fit màn hình
-                        const widthRatio = containerWidth / originalViewport.width;
-                        const heightRatio = containerHeight / originalViewport.height;
-                        const fitRatio = Math.min(widthRatio, heightRatio);
-
-                        const renderRatio = fitRatio * scale;
-
-                        finalViewport = page.getViewport({ scale: renderRatio });
-                    } else {
-                        // === DESKTOP: Giữ nguyên logic cũ ===
-                        finalViewport = page.getViewport({ scale: scale });
-                    }
-
-                    // === Tạo canvas ẩn để render trước ===
-                    const offscreenCanvas = document.createElement("canvas");
-                    const offscreenContext = offscreenCanvas.getContext("2d");
-
-                    offscreenCanvas.width = finalViewport.width;
-                    offscreenCanvas.height = finalViewport.height;
-
-                    const renderContext = {
-                        canvasContext: offscreenContext,
-                        viewport: finalViewport,
-                    };
-
-                    // Render vào canvas ẩn trước
-                    page.render(renderContext).promise.then(() => {
-                        // Sau khi render xong, copy sang canvas chính
-                        canvas.width = finalViewport.width;
-                        canvas.height = finalViewport.height;
-
-                        context.drawImage(offscreenCanvas, 0, 0);
-
-                        // Style hiển thị
-                        if (isMobile && scale === 1) {
-                            // MOBILE: Khi scale = 1 thì fit chiều rộng màn hình
-                            canvas.style.width = "100%";
-                            canvas.style.height = "auto";
-                        } else {
-                            // Desktop hoặc khi zoom in
-                            canvas.style.width = `${finalViewport.width}px`;
-                            canvas.style.height = `${finalViewport.height}px`;
-                        }
-
-                        isRendering = false;
-                    });
-                });
             }
 
             document.getElementById("downloadSuccessBtn").addEventListener("click", () => {
