@@ -570,11 +570,9 @@
                     fileBlob = new Blob([response.data], { type: "application/pdf" });
 
                     const pdfUrl = window.URL.createObjectURL(fileBlob);
-                    console.log("fileBlob",pdfUrl);
                     const viewerFrame = document.getElementById("pdfViewerFrame");
                     // Sử dụng viewer.html từ PDF.js
-                    viewerFrame.src = `https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
-
+                    viewerFrame.src = `/pdfjs/web/viewer.html?file=${encodeURIComponent(pdfUrl)}`;
                     const contentDisposition = response.headers["content-disposition"];
                     if (contentDisposition) {
                         const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
