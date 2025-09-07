@@ -787,7 +787,6 @@ See https://github.com/adobe-type-tools/cmap-resources
   
     <script>
 window.addEventListener("message", (event) => {
-  console.log("📥 viewer.html nhận message:", event.data);
 
   if (event.data.type === "LOAD_PDF" && event.data.pdfData) {
     PDFViewerApplication.open({ data: event.data.pdfData })
