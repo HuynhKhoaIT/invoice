@@ -5913,6 +5913,7 @@ body.wait::before{
 }
 
 .toolbar{
+  display: none;
   z-index:2;
 }
 
