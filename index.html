@@ -34,6 +34,7 @@
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
+                touch-action: pan-x pan-y;
             }
 
             .container {
@@ -769,7 +770,6 @@
             document.addEventListener(
                 "wheel",
                 function (e) {
-                    console.log('111');
                     if (e.ctrlKey) {
                         e.preventDefault();
                     }
@@ -781,10 +781,7 @@
             document.addEventListener(
                 "touchmove",
                 function (e) {
-                    alert('2',e.scale);
-                    if (e.scale !== 1) {
-                        e.preventDefault();
-                    }
+                    e.preventDefault();
                 },
                 { passive: false }
             );
