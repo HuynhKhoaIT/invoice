@@ -5879,7 +5879,6 @@ body.wait::before{
   margin:0;
   display:flex;
   flex-direction:column;
-  top: -42px;
 }
 
 #sidebarContent{
@@ -5897,6 +5896,12 @@ body.wait::before{
   inset:var(--toolbar-height) 0 0;
   outline:none;
   z-index:0;
+  top:-10px;
+  -ms-overflow-style: none;   
+  scrollbar-width: none;  
+}
+#viewerContainer.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 #viewerContainer:not(.pdfPresentationMode){

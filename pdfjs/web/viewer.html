@@ -23,7 +23,7 @@ See https://github.com/adobe-type-tools/cmap-resources
 <html dir="ltr" mozdisallowselectionprint>
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <meta name="google" content="notranslate">
     <title>PDF.js viewer</title>
 
@@ -83,8 +83,8 @@ See https://github.com/adobe-type-tools/cmap-resources
       </div>  <!-- sidebarContainer -->
 
       <div id="mainContainer">
-        <div class="toolbar">
-          <div id="toolbarContainer">
+        <div class="toolbar" style="display:none">
+          <div id="toolbarContainer" style="display:none">
             <div id="toolbarViewer" class="toolbarHorizontalGroup">
               <div id="toolbarViewerLeft" class="toolbarHorizontalGroup">
                 <button id="sidebarToggleButton" class="toolbarButton" type="button" tabindex="0" data-l10n-id="pdfjs-toggle-sidebar-button" aria-expanded="false" aria-haspopup="true" aria-controls="sidebarContainer">
@@ -783,5 +783,88 @@ See https://github.com/adobe-type-tools/cmap-resources
 
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
+  
+     <!-- force page-fit -->
+    <script>
+
+      function fitWidthNoScroll() {
+        const pdfViewer = PDFViewerApplication.pdfViewer;
+        const firstPage = pdfViewer.getPageView(0).pdfPage;
+        const viewport = firstPage.getViewport({ scale: 1.0 });
+
+        const container = document.getElementById("viewerContainer");
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+
+        let scaleX = containerWidth / viewport.width;
+        let scaleY = containerHeight / viewport.height;
+        const PDF_TO_CSS_UNITS = 96.0 / 72.0; // chuyển đơn vị point của pdf sang px (1pt = 72inch, 1inch = 97px)
+        let scale = Math.min(scaleX, scaleY);
+        pdfViewer.currentScaleValue = scale / PDF_TO_CSS_UNITS;
+        PDFViewerApplication.pdfViewer.setMinScale(scale / PDF_TO_CSS_UNITS); // gán lại giá trị MIN_SCALE
+      }
+
+
+
+
+      function doUpdateScrollToCenter(pdfViewer, pageView){
+        fitWidthNoScroll();
+
+        const pageDiv = pageView.div;
+        const container = document.getElementById("viewerContainer");
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+
+        const pageRect = pageDiv.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+
+        const scrollLeft =
+          pageDiv.offsetLeft - (containerRect.width - pageRect.width) / 2;
+        const scrollTop =
+          pageDiv.offsetTop - (containerRect.height - pageRect.height) / 2;
+
+        container.scrollTo({
+          left: scrollLeft,
+          top: scrollTop,
+          behavior: "smooth",
+        });
+      }
+
+      function hookPdf() {
+        const { pdfViewer, eventBus } = PDFViewerApplication;
+        eventBus.on("pagesinit", (evt) => {
+          pdfViewer.currentScaleValue = "page-fit";
+          
+        });
+
+        eventBus.on("pagesloaded", (evt) => {
+          const pdfViewer = PDFViewerApplication.pdfViewer;
+          const pageView = pdfViewer.getPageView(0); // page 1
+          if (!pageView || !pageView.div){
+            setTimeout(() => {
+              doUpdateScrollToCenter(pdfViewer, pageView);
+            }, 150);
+          }else{
+            console.log("-----------> pageView null");
+            doUpdateScrollToCenter(pdfViewer, pageView);
+          }
+        });
+        eventBus.on("textlayerrendered", (evt) => {
+          console.log("-----------> textlayerrendered "+evt);
+        });
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        const waitForViewer = () => {
+          if (window.PDFViewerApplication && PDFViewerApplication.eventBus) {
+            hookPdf();
+          } else {
+            setTimeout(waitForViewer, 50);
+          }
+        };
+        waitForViewer();
+        
+      });
+    </script>
   </body>
 </html>
